@@ -1,0 +1,32 @@
+---
+###############################################################################
+# Configure Confluence Data Center Cluster
+#
+# This task is intentionally skipped during the initial installation.
+# It should be executed only after Confluence has completed the setup
+# wizard and generated confluence.cfg.xml.
+###############################################################################
+
+- name: Check if Confluence has been initialized
+  stat:
+    path: "{{ confluence_home }}/confluence.cfg.xml"
+  register: confluence_cfg
+
+- name: Skip cluster configuration if Confluence is not initialized
+  debug:
+    msg: >
+      Confluence has not completed its initial setup.
+      Cluster configuration will be skipped.
+  when: not confluence_cfg.stat.exists
+
+- name: Deploy cluster.properties
+  template:
+    src: cluster.properties.j2
+    dest: "{{ confluence_home }}/cluster.properties"
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    mode: "0644"
+  when:
+    - confluence_cluster_enabled
+    - confluence_cfg.stat.exists
+  notify: Restart Confluence

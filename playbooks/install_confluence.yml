@@ -1,0 +1,9 @@
+---
+- name: Install Confluence Data Center
+  hosts:
+    confluence
+  become:
+    true
+  gather_facts: true
+  roles:
+    - role: confluence

@@ -1,0 +1,14 @@
+---
+- name: Reload systemd
+  systemd:
+    daemon_reload:
+      true
+
+- name: Restart Confluence
+  systemd:
+    name:
+      "{{ confluence_service_name }}"
+    state:
+      restarted
+    daemon_reload:
+      true

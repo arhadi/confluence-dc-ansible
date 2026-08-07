@@ -1,0 +1,14 @@
+---
+confluence_required_packages:
+
+  - java-21-openjdk
+  - java-21-openjdk-devel
+  - tar
+  - unzip
+  - rsync
+  - wget
+  - fontconfig
+
+confluence_archive_path:
+
+  "{{ role_path }}/files/{{ confluence_archive }}"

@@ -1,0 +1,48 @@
+---
+- name: Ensure Confluence startup scripts executable
+  file:
+    path:
+      "{{ confluence_install_dir }}/bin/{{ item }}"
+    mode:
+      "0755"
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+  loop:
+    - start-confluence.sh
+    - stop-confluence.sh
+
+- name: Create Confluence systemd service
+  template:
+    src:
+      confluence.service.j2
+    dest:
+      /etc/systemd/system/{{ confluence_service_name }}.service
+    owner:
+      root
+    group:
+      root
+    mode:
+      "0644"
+  notify:
+    - Reload systemd
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload:
+      true
+
+- name: Enable Confluence service
+  systemd:
+    name:
+      "{{ confluence_service_name }}"
+    enabled:
+      true
+
+- name: Start Confluence service
+  systemd:
+    name:
+      "{{ confluence_service_name }}"
+    state:
+      started

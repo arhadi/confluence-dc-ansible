@@ -1,0 +1,19 @@
+[Unit]
+Description=Atlassian Confluence Data Center
+After=network.target
+
+[Service]
+Type=forking
+User={{ confluence_user }}
+Group={{ confluence_group }}
+Environment="JAVA_HOME={{ java_home }}"
+Environment="CATALINA_PID={{ confluence_home }}/confluence.pid"
+ExecStart={{ confluence_install_dir }}/bin/start-confluence.sh
+ExecStop={{ confluence_install_dir }}/bin/stop-confluence.sh
+TimeoutStartSec=600
+TimeoutStopSec=600
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

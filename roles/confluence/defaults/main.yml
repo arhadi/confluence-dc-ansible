@@ -1,0 +1,24 @@
+---
+###############################################################################
+# Data Center Cluster
+###############################################################################
+
+confluence_version: "10.2.15"
+
+confluence_user: confluence
+
+confluence_group: confluence
+
+confluence_service_name: confluence
+
+confluence_http_port: 8090
+
+confluence_cluster_enabled: true
+
+confluence_cluster_name: ConfluenceDC
+
+confluence_cluster_node_id: "{{ inventory_hostname }}"
+
+confluence_shared_home: /app/confluence-shared
+
+confluence_synchrony_enabled: true

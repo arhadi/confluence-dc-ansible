@@ -1,0 +1,25 @@
+---
+###############################################################################
+# Validate Confluence Cluster
+###############################################################################
+
+- name: Check cluster.properties
+  stat:
+    path: "{{ confluence_home }}/cluster.properties"
+  register: cluster_properties
+
+- name: Verify cluster.properties exists
+  assert:
+    that:
+      - cluster_properties.stat.exists
+    fail_msg: "cluster.properties not found"
+
+- name: Display cluster configuration
+  debug:
+    msg:
+      - "==========================================="
+      - "Confluence Cluster Configuration"
+      - "Cluster Enabled : {{ confluence_cluster_enabled }}"
+      - "Node ID         : {{ confluence_cluster_node_id }}"
+      - "Shared Home     : {{ confluence_shared_home }}"
+      - "==========================================="

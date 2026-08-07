@@ -1,0 +1,66 @@
+---
+- name: Install Confluence required packages
+  dnf:
+    name:
+      "{{ confluence_required_packages }}"
+    state:
+      present
+
+- name: Create Confluence group
+  group:
+    name:
+      "{{ confluence_group }}"
+    state:
+      present
+
+- name: Create Confluence user
+  user:
+    name:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    home:
+      "/home/{{ confluence_user }}"
+    shell:
+      /bin/bash
+    state:
+      present
+
+- name: Create Confluence installation directory
+  file:
+    path:
+      "{{ confluence_install_parent }}"
+    state:
+      directory
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    mode:
+      "0755"
+
+- name: Create Confluence home directory
+  file:
+    path:
+      "{{ confluence_home }}"
+    state:
+      directory
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    mode:
+      "0755"
+
+- name: Create Confluence shared home
+  file:
+    path:
+      "{{ confluence_shared_home }}"
+    state:
+      directory
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    mode:
+      "0755"

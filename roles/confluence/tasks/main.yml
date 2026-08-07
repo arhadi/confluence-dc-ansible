@@ -1,0 +1,22 @@
+---
+###############################################################################
+# Confluence Role
+###############################################################################
+
+- name: Precheck Confluence installation
+  import_tasks: precheck.yml
+
+- name: Install prerequisites
+  import_tasks: prerequisites.yml
+
+- name: Install Confluence
+  import_tasks: install.yml
+
+- name: Configure Confluence
+  import_tasks: configure.yml
+
+- name: Configure systemd
+  import_tasks: systemd.yml
+
+- name: Validate Confluence installation
+  import_tasks: validate.yml

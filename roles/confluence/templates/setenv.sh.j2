@@ -1,0 +1,8 @@
+#!/bin/sh
+
+export JAVA_HOME={{ java_home }}
+
+export CATALINA_OPTS="$CATALINA_OPTS \
+-Xms{{ confluence_xms }} \
+-Xmx{{ confluence_xmx }} \
+-Dconfluence.home={{ confluence_home }}"

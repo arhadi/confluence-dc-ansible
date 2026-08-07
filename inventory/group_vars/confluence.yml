@@ -1,0 +1,112 @@
+---
+
+#######################################
+# Confluence Version
+#######################################
+
+confluence_version: "10.2.15"
+
+confluence_archive:
+  "atlassian-confluence-{{ confluence_version }}.tar.gz"
+
+#######################################
+# Installation
+#######################################
+
+confluence_user:
+  confluence
+
+confluence_group:
+  confluence
+
+confluence_install_parent:
+  /app
+
+confluence_install_dir:
+  "{{ confluence_install_parent }}/confluence-{{ confluence_version }}"
+
+confluence_home:
+  /app/confluence-data
+
+#######################################
+# Java
+#######################################
+
+java_package:
+  java-21-openjdk
+
+java_home:
+  "{{ ansible_facts.java.home }}"
+
+#######################################
+# Database PostgreSQL
+#######################################
+
+postgres_host:
+  localhost
+
+
+postgres_port:
+  15432
+
+postgres_database:
+  confluence
+
+postgres_user:
+  confluence
+
+postgres_password:
+  postgres
+
+#######################################
+# PostgreSQL JDBC
+#######################################
+
+postgresql_jdbc_version:
+  "42.7.4"
+
+postgresql_jdbc_jar:
+  "postgresql-{{ postgresql_jdbc_version }}.jar"
+
+#######################################
+# Service
+#######################################
+
+confluence_service_name:
+  confluence
+
+#######################################
+# Network
+#######################################
+
+confluence_http_port:
+  8090
+
+confluence_https_port:
+  8443
+
+#######################################
+# Cluster
+#######################################
+
+confluence_cluster_enabled:
+  true
+
+confluence_cluster_name:
+  confluence-cluster
+
+confluence_node_name:
+  confluence-node01
+
+confluence_shared_home:
+  /app/confluence-shared-home
+
+#######################################
+# JVM
+#######################################
+
+confluence_xms:
+  4096m
+
+confluence_xmx:
+  4096m

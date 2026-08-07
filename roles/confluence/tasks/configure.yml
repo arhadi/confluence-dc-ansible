@@ -1,0 +1,63 @@
+---
+###############################################################################
+# Configure Confluence
+###############################################################################
+
+- name: Configure Confluence home
+  template:
+    src: confluence-init.properties.j2
+    dest: "{{ confluence_install_dir }}/confluence/WEB-INF/classes/confluence-init.properties"
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    mode: "0644"
+  notify: Restart Confluence
+
+###############################################################################
+# JVM Configuration
+###############################################################################
+
+- name: Deploy setenv.sh
+  template:
+    src: setenv.sh.j2
+    dest: "{{ confluence_install_dir }}/bin/setenv.sh"
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    mode: "0755"
+  notify: Restart Confluence
+
+###############################################################################
+# PostgreSQL JDBC Driver
+###############################################################################
+
+- name: Copy PostgreSQL JDBC driver
+  copy:
+    src: postgresql-42.7.4.jar
+    dest: "{{ confluence_install_dir }}/confluence/WEB-INF/lib/postgresql-42.7.4.jar"
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    mode: "0644"
+  notify: Restart Confluence
+
+###############################################################################
+# First Installation
+###############################################################################
+
+- name: Remove generated confluence.cfg.xml if present
+  file:
+    path: "{{ confluence_home }}/confluence.cfg.xml"
+    state: absent
+
+###############################################################################
+# Summary
+###############################################################################
+
+- name: Configuration summary
+  debug:
+    msg:
+      - "==============================================="
+      - "Confluence configuration completed"
+      - "Home Directory : {{ confluence_home }}"
+      - "Install Dir    : {{ confluence_install_dir }}"
+      - "Java Home      : {{ java_home }}"
+      - "JDBC Driver    : PostgreSQL"
+      - "==============================================="

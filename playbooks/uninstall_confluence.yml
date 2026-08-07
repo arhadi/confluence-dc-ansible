@@ -1,0 +1,14 @@
+---
+
+- name: Uninstall Confluence Data Center
+
+  hosts:
+    confluence
+
+  become:
+    true
+
+  roles:
+
+    - role: confluence
+      tasks_from: uninstall.yml

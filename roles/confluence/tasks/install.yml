@@ -1,0 +1,104 @@
+---
+- name: Check Confluence installer archive
+  stat:
+    path:
+      "{{ confluence_archive_path }}"
+  register:
+    confluence_archive_stat
+
+- name: Fail if Confluence archive missing
+  assert:
+    that:
+      - confluence_archive_stat.stat.exists
+    fail_msg:
+      - "Confluence installer archive not found: {{ confluence_archive_path }}"
+
+- name: Extract Confluence archive
+  unarchive:
+    src:
+      "{{ confluence_archive_path }}"
+    dest:
+      "{{ confluence_install_parent }}"
+    remote_src:
+      false
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    creates:
+      "{{ confluence_install_dir }}"
+
+- name: Detect extracted Confluence directory
+  shell:
+    |
+      ls -d {{ confluence_install_parent }}/atlassian-confluence-* 2>/dev/null | head -1
+  register:
+    confluence_extracted_dir
+  changed_when:
+    false
+
+- name: Display extracted Confluence directory
+  debug:
+    msg:
+      - "Extracted directory: {{ confluence_extracted_dir.stdout }}"
+
+- name: Rename extracted directory
+  command:
+    mv {{ confluence_extracted_dir.stdout }} {{ confluence_install_dir }}
+  args:
+    creates:
+      "{{ confluence_install_dir }}"
+  when:
+    - confluence_extracted_dir.stdout != confluence_install_dir
+
+- name: Ensure Confluence installation ownership
+  file:
+    path:
+      "{{ confluence_install_dir }}"
+    state:
+      directory
+    recurse:
+      true
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+
+- name: Create Confluence log directory
+  file:
+    path:
+      "{{ confluence_home }}/logs"
+    state:
+      directory
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    mode:
+      "0755"
+
+- name: Create Confluence temp directory
+  file:
+    path:
+      "{{ confluence_home }}/temp"
+    state:
+      directory
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    mode:
+      "0755"
+
+- name: Create Confluence work directory
+  file:
+    path:
+      "{{ confluence_home }}/work"
+    state:
+      directory
+    owner:
+      "{{ confluence_user }}"
+    group:
+      "{{ confluence_group }}"
+    mode:
+      "0755"

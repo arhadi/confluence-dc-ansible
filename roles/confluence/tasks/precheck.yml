@@ -1,0 +1,121 @@
+---
+
+- name: Display Confluence variables
+  debug:
+    msg:
+      - "========================================"
+      - "Confluence Precheck"
+      - "Version          : {{ confluence_version }}"
+      - "Install Directory : {{ confluence_install_dir }}"
+      - "Home Directory    : {{ confluence_home }}"
+      - "Database          : {{ postgres_database }}"
+      - "DB Host           : {{ postgres_host }}"
+      - "HTTP Port         : {{ confluence_http_port }}"
+      - "Cluster Enabled   : {{ confluence_cluster_enabled }}"
+      - "========================================"
+
+- name: Check operating system
+  assert:
+    that:
+      - ansible_distribution == "RedHat"
+      - ansible_distribution_major_version | int == 9
+    fail_msg:
+      - "Only RHEL 9 is supported"
+
+- name: Check Confluence archive
+  stat:
+    path:
+      "{{ confluence_archive_path }}"
+  register:
+    confluence_archive_check
+
+- name: Validate Confluence archive exists
+  assert:
+    that:
+      - confluence_archive_check.stat.exists
+    fail_msg:
+      - "Missing Confluence installer archive: {{ confluence_archive_path }}"
+
+- name: Check Java installation
+  command:
+    java -version
+  register:
+    java_check
+  changed_when:
+    false
+  failed_when:
+    false
+
+- name: Detect Java home
+  shell: |
+    dirname $(dirname $(readlink -f $(which java)))
+  register:
+    detected_java_home
+  changed_when:
+    false
+
+- name: Set Java home fact
+  set_fact:
+    java_home:
+      "{{ detected_java_home.stdout }}"
+
+- name: Validate Java home is JDK
+  stat:
+    path:
+      "{{ java_home }}/bin/javac"
+  register:
+    java_compiler
+
+- name: Fail if JDK is missing
+  assert:
+    that:
+      - java_compiler.stat.exists
+    fail_msg:
+      - "JAVA_HOME does not point to a JDK: {{ java_home }}"
+
+- name: Display Java version
+  debug:
+    var:
+      java_check.stderr_lines
+
+- name: Check confluence user
+  getent:
+    database:
+      passwd
+    key:
+      "{{ confluence_user }}"
+  register:
+    confluence_user_check
+  failed_when:
+    false
+
+- name: Check available disk space
+  shell:
+    df -BG {{ confluence_install_parent }} | tail -1 | awk '{print $4}' | sed 's/G//'
+  register:
+    confluence_disk
+
+- name: Validate disk space
+  assert:
+    that:
+      - confluence_disk.stdout | int >= 10
+    fail_msg:
+      - "Insufficient disk space on {{ confluence_install_parent }}"
+
+- name: Test PostgreSQL connectivity
+  wait_for:
+    host:
+      "{{ postgres_host }}"
+    port:
+      "{{ postgres_port }}"
+    timeout:
+      10
+  register:
+    postgres_check
+
+- name: PostgreSQL connectivity result
+  debug:
+    msg:
+      - "PostgreSQL reachable"
+      - "Host: {{ postgres_host }}"
+      - "Port: {{ postgres_port }}"
