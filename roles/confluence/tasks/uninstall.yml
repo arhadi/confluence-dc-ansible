@@ -1,0 +1,160 @@
+---
+###############################################################################
+# Confluence Data Center - Uninstall
+###############################################################################
+
+- name: Display Confluence uninstall configuration
+  ansible.builtin.debug:
+    msg:
+      - "========================================"
+      - "Confluence uninstall"
+      - "Version       : {{ confluence_version }}"
+      - "Service       : {{ confluence_service_name }}"
+      - "Install Dir   : {{ confluence_install_dir }}"
+      - "Home Dir      : {{ confluence_home }}"
+      - "Shared Home   : {{ confluence_shared_home }}"
+      - "User          : {{ confluence_user }}"
+      - "Group         : {{ confluence_group }}"
+      - "========================================"
+
+###############################################################################
+# Stop Confluence
+###############################################################################
+
+- name: Check if Confluence service exists
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ confluence_service_name }}.service"
+  register: confluence_service_file
+
+- name: Stop and disable Confluence service
+  ansible.builtin.systemd:
+    name: "{{ confluence_service_name }}"
+    state: stopped
+    enabled: false
+  when: confluence_service_file.stat.exists
+  failed_when: false
+
+###############################################################################
+# Remove systemd service
+###############################################################################
+
+- name: Remove Confluence systemd service
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ confluence_service_name }}.service"
+    state: absent
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Reset failed Confluence service state
+  ansible.builtin.command:
+    cmd: "systemctl reset-failed {{ confluence_service_name }}"
+  changed_when: false
+  failed_when: false
+
+###############################################################################
+# Remove Confluence installation
+###############################################################################
+
+- name: Remove Confluence installation directory
+  ansible.builtin.file:
+    path: "{{ confluence_install_dir }}"
+    state: absent
+  when: confluence_remove_install_dir | default(true) | bool
+
+###############################################################################
+# Remove Confluence Home
+###############################################################################
+
+- name: Remove Confluence home directory
+  ansible.builtin.file:
+    path: "{{ confluence_home }}"
+    state: absent
+  when: confluence_remove_home | default(false) | bool
+
+###############################################################################
+# Remove Confluence Shared Home
+###############################################################################
+
+- name: Remove Confluence shared home directory
+  ansible.builtin.file:
+    path: "{{ confluence_shared_home }}"
+    state: absent
+  when:
+    - confluence_cluster_enabled | default(false) | bool
+    - confluence_remove_shared_home | default(false) | bool
+
+###############################################################################
+# Remove installer archive
+###############################################################################
+
+- name: Remove Confluence installer archive
+  ansible.builtin.file:
+    path: "{{ confluence_install_parent }}/{{ confluence_archive }}"
+    state: absent
+  when:
+    - confluence_archive is defined
+    - confluence_install_parent is defined
+    - confluence_remove_archive | default(false) | bool
+
+###############################################################################
+# Remove OS User
+###############################################################################
+
+- name: Remove Confluence user
+  ansible.builtin.user:
+    name: "{{ confluence_user }}"
+    state: absent
+    remove: false
+  when: confluence_remove_user | default(false) | bool
+
+###############################################################################
+# Remove OS Group
+###############################################################################
+
+- name: Remove Confluence group
+  ansible.builtin.group:
+    name: "{{ confluence_group }}"
+    state: absent
+  when: confluence_remove_group | default(false) | bool
+
+###############################################################################
+# Validation
+###############################################################################
+
+- name: Check Confluence installation directory
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}"
+  register: confluence_install_check
+
+- name: Check Confluence systemd service
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ confluence_service_name }}.service"
+  register: confluence_service_check
+
+- name: Validate Confluence uninstall
+  ansible.builtin.assert:
+    that:
+      - not confluence_install_check.stat.exists
+      - not confluence_service_check.stat.exists
+    fail_msg: "Confluence uninstall validation failed."
+    success_msg: "Confluence application installation was successfully removed."
+
+###############################################################################
+# Summary
+###############################################################################
+
+- name: Display Confluence uninstall summary
+  ansible.builtin.debug:
+    msg:
+      - "========================================"
+      - "Confluence uninstall completed"
+      - "Install Dir : {{ 'REMOVED' if (confluence_remove_install_dir | default(true) | bool) else 'PRESERVED' }}"
+      - "Home Dir    : {{ 'REMOVED' if (confluence_remove_home | default(false) | bool) else 'PRESERVED' }}"
+      - "Shared Home : {{ 'REMOVED' if (confluence_remove_shared_home | default(false) | bool) else 'PRESERVED' }}"
+      - "Service     : REMOVED"
+      - "OS User     : {{ 'REMOVED' if (confluence_remove_user | default(false) | bool) else 'PRESERVED' }}"
+      - "OS Group    : {{ 'REMOVED' if (confluence_remove_group | default(false) | bool) else 'PRESERVED' }}"
+      - "Database    : NOT MODIFIED"
+      - "========================================"

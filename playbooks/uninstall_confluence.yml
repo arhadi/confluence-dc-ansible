@@ -1,14 +1,19 @@
 ---
-
 - name: Uninstall Confluence Data Center
+  hosts: confluence
+  become: true
+  gather_facts: true
 
-  hosts:
-    confluence
+  vars:
+    confluence_remove_install_dir: true
+    confluence_remove_home: true
+    confluence_remove_shared_home: true
+    confluence_remove_archive: false
+    confluence_remove_user: true
+    confluence_remove_group: true
 
-  become:
-    true
-
-  roles:
-
-    - role: confluence
-      tasks_from: uninstall.yml
+  tasks:
+    - name: Run Confluence uninstall
+      ansible.builtin.import_role:
+        name: confluence
+        tasks_from: uninstall
