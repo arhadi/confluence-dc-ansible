@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 
 - name: Configure Confluence home
-  template:
+  ansible.builtin.template:
     src: confluence-init.properties.j2
     dest: "{{ confluence_install_dir }}/confluence/WEB-INF/classes/confluence-init.properties"
     owner: "{{ confluence_user }}"
@@ -17,7 +17,7 @@
 # ------------------------------------------------------------
 
 - name: Deploy setenv.sh
-  template:
+  ansible.builtin.template:
     src: setenv.sh.j2
     dest: "{{ confluence_install_dir }}/bin/setenv.sh"
     owner: "{{ confluence_user }}"
@@ -30,34 +30,37 @@
 # ------------------------------------------------------------
 
 - name: Copy PostgreSQL JDBC driver
-  copy:
-    src: postgresql-42.7.4.jar
-    dest: "{{ confluence_install_dir }}/confluence/WEB-INF/lib/postgresql-42.7.4.jar"
+  ansible.builtin.copy:
+    src: "{{ postgresql_jdbc_jar }}"
+    dest: "{{ confluence_install_dir }}/confluence/WEB-INF/lib/{{ postgresql_jdbc_jar }}"
     owner: "{{ confluence_user }}"
     group: "{{ confluence_group }}"
     mode: "0644"
   notify: Restart Confluence
 
 # ------------------------------------------------------------
-# First Installation
+# Ensure Confluence Home Ownership
 # ------------------------------------------------------------
 
-- name: Remove generated confluence.cfg.xml if present
-  file:
-    path: "{{ confluence_home }}/confluence.cfg.xml"
-    state: absent
+- name: Ensure Confluence home ownership
+  ansible.builtin.file:
+    path: "{{ confluence_home }}"
+    state: directory
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    recurse: true
 
 # ------------------------------------------------------------
 # Summary
 # ------------------------------------------------------------
 
 - name: Configuration summary
-  debug:
+  ansible.builtin.debug:
     msg:
       - "==============================================="
       - "Confluence configuration completed"
       - "Home Directory : {{ confluence_home }}"
       - "Install Dir    : {{ confluence_install_dir }}"
       - "Java Home      : {{ java_home }}"
-      - "JDBC Driver    : PostgreSQL"
+      - "JDBC Driver    : {{ postgresql_jdbc_jar }}"
       - "==============================================="

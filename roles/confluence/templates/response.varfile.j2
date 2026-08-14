@@ -1,0 +1,15 @@
+# install4j response file for Confluence {{ confluence_version }}
+
+app.confHome={{ confluence_home }}
+app.install.service$Boolean=false
+existingInstallationDir=/opt/Confluence
+httpPort$Long={{ confluence_http_port }}
+launch.application$Boolean=false
+portChoice=custom
+rmiPort$Long={{ confluence_control_port }}
+sys.adminRights$Boolean=true
+sys.adminRightsUiRootUnix$Boolean=false
+sys.installForAllUsers$Boolean=true
+sys.installationDir={{ confluence_install_dir }}
+sys.languageId=en
+sys.streamlinedInstallationString=false

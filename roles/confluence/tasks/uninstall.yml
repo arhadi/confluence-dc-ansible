@@ -123,23 +123,102 @@
 # Validation
 # ------------------------------------------------------------
 
-- name: Check Confluence installation directory
+- name: Check Confluence installation directory after uninstall
   ansible.builtin.stat:
     path: "{{ confluence_install_dir }}"
   register: confluence_install_check
 
-- name: Check Confluence systemd service
+- name: Verify Confluence installation directory state
+  ansible.builtin.assert:
+    that:
+      - >
+        (not confluence_remove_install_dir | default(true) | bool)
+        or
+        (not confluence_install_check.stat.exists)
+    fail_msg: "Confluence installation directory was not removed."
+
+- name: Check Confluence home after uninstall
+  ansible.builtin.stat:
+    path: "{{ confluence_home }}"
+  register: confluence_home_check
+
+- name: Verify Confluence home state
+  ansible.builtin.assert:
+    that:
+      - >
+        (not confluence_remove_home | default(false) | bool)
+        or
+        (not confluence_home_check.stat.exists)
+    fail_msg: "Confluence home directory was not removed."
+
+- name: Check Confluence shared home after uninstall
+  ansible.builtin.stat:
+    path: "{{ confluence_shared_home }}"
+  register: confluence_shared_home_check
+
+- name: Verify Confluence shared home state
+  ansible.builtin.assert:
+    that:
+      - >
+        (not confluence_remove_shared_home | default(false) | bool)
+        or
+        (not confluence_shared_home_check.stat.exists)
+    fail_msg: "Confluence shared home directory was not removed."
+
+- name: Check Confluence systemd service after uninstall
   ansible.builtin.stat:
     path: "/etc/systemd/system/{{ confluence_service_name }}.service"
   register: confluence_service_check
 
-- name: Validate Confluence uninstall
+- name: Verify Confluence systemd service removed
   ansible.builtin.assert:
     that:
-      - not confluence_install_check.stat.exists
       - not confluence_service_check.stat.exists
-    fail_msg: "Confluence uninstall validation failed."
-    success_msg: "Confluence application installation was successfully removed."
+    fail_msg: "Confluence systemd service was not removed."
+
+- name: Check Confluence user after uninstall
+  ansible.builtin.command:
+    cmd: "id {{ confluence_user }}"
+  register: confluence_user_check
+  changed_when: false
+  failed_when: false
+
+- name: Verify Confluence user state
+  ansible.builtin.assert:
+    that:
+      - >
+        (not confluence_remove_user | default(false) | bool)
+        or
+        (confluence_user_check.rc != 0)
+    fail_msg: "Confluence OS user was not removed."
+
+- name: Check Confluence group after uninstall
+  ansible.builtin.command:
+    cmd: "getent group {{ confluence_group }}"
+  register: confluence_group_check
+  changed_when: false
+  failed_when: false
+
+- name: Verify Confluence group state
+  ansible.builtin.assert:
+    that:
+      - >
+        (not confluence_remove_group | default(false) | bool)
+        or
+        (confluence_group_check.rc != 0)
+    fail_msg: "Confluence OS group was not removed."
+
+# ------------------------------------------------------------
+# Database
+# ------------------------------------------------------------
+
+- name: Report Confluence database preservation
+  ansible.builtin.debug:
+    msg:
+      - "Confluence PostgreSQL database is NOT modified by this playbook."
+      - "Database : {{ postgres_database }}"
+      - "Host     : {{ postgres_host }}"
+      - "Port     : {{ postgres_port }}"
 
 # ------------------------------------------------------------
 # Summary

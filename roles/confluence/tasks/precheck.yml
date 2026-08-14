@@ -1,11 +1,14 @@
 ---
 
 - name: Display Confluence variables
-  debug:
+  ansible.builtin.debug:
     msg:
       - "========================================"
       - "Confluence Precheck"
-      - "Version          : {{ confluence_version }}"
+      - "Version           : {{ confluence_version }}"
+      - "Install Method    : {{ confluence_install_method }}"
+      - "Archive           : {{ confluence_archive }}"
+      - "Binary Installer  : {{ confluence_installer }}"
       - "Install Directory : {{ confluence_install_dir }}"
       - "Home Directory    : {{ confluence_home }}"
       - "Database          : {{ postgres_database }}"
@@ -22,19 +25,89 @@
     fail_msg:
       - "Only RHEL 9 is supported"
 
+# ------------------------------------------------------------
+# Validate Installation Method
+# ------------------------------------------------------------
+
+- name: Validate Confluence installation method
+  ansible.builtin.assert:
+    that:
+      - confluence_install_method in ['archive', 'installer']
+    fail_msg: >-
+      Invalid confluence_install_method={{ confluence_install_method }}.
+      Supported methods are archive and installer.
+
+# ------------------------------------------------------------
+# Archive Installer Precheck
+# ------------------------------------------------------------
+
 - name: Check Confluence archive
-  stat:
-    path:
-      "{{ confluence_archive_path }}"
-  register:
-    confluence_archive_check
+  ansible.builtin.stat:
+    path: "{{ confluence_archive_path }}"
+    checksum_algorithm: sha256
+  register: confluence_archive_check
+  when: confluence_install_method == "archive"
 
 - name: Validate Confluence archive exists
-  assert:
+  ansible.builtin.assert:
     that:
       - confluence_archive_check.stat.exists
-    fail_msg:
-      - "Missing Confluence installer archive: {{ confluence_archive_path }}"
+    fail_msg: "Missing Confluence archive: {{ confluence_archive_path }}"
+  when: confluence_install_method == "archive"
+
+- name: Verify Confluence archive SHA256 checksum
+  ansible.builtin.assert:
+    that:
+      - confluence_archive_check.stat.checksum == confluence_archive_sha256
+    fail_msg: |
+      Confluence archive checksum verification failed.
+
+      Expected:
+      {{ confluence_archive_sha256 }}
+
+      Actual:
+      {{ confluence_archive_check.stat.checksum }}
+
+    success_msg: "Confluence archive checksum verified successfully."
+  when: confluence_install_method == "archive"
+
+# ------------------------------------------------------------
+# Linux Binary Installer Precheck
+# ------------------------------------------------------------
+
+- name: Check Confluence binary installer
+  ansible.builtin.stat:
+    path: "{{ confluence_installer_path }}"
+    checksum_algorithm: sha256
+  register: confluence_installer_check
+  when: confluence_install_method == "installer"
+
+- name: Validate Confluence binary installer exists
+  ansible.builtin.assert:
+    that:
+      - confluence_installer_check.stat.exists
+    fail_msg: "Missing Confluence binary installer: {{ confluence_installer_path }}"
+  when: confluence_install_method == "installer"
+
+- name: Verify Confluence binary installer SHA256 checksum
+  ansible.builtin.assert:
+    that:
+      - confluence_installer_check.stat.checksum == confluence_installer_sha256
+    fail_msg: |
+      Confluence binary installer checksum verification failed.
+
+      Expected:
+      {{ confluence_installer_sha256 }}
+
+      Actual:
+      {{ confluence_installer_check.stat.checksum }}
+
+    success_msg: "Confluence binary installer checksum verified successfully."
+  when: confluence_install_method == "installer"
+
+# ------------------------------------------------------------
+# Check Java
+# ------------------------------------------------------------
 
 - name: Check Java installation
   command:
@@ -90,10 +163,10 @@
     false
 
 - name: Check available disk space
-  shell:
+  ansible.builtin.shell: |
     df -BG {{ confluence_install_parent }} | tail -1 | awk '{print $4}' | sed 's/G//'
-  register:
-    confluence_disk
+  register: confluence_disk
+  changed_when: false
 
 - name: Validate disk space
   assert:

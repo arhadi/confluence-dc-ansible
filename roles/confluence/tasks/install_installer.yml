@@ -1,0 +1,294 @@
+---
+# ------------------------------------------------------------
+# Confluence Linux Binary Installation
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# Verify Binary Installer
+# ------------------------------------------------------------
+
+- name: Verify Confluence binary installer exists
+  ansible.builtin.stat:
+    path: "{{ confluence_installer_path }}"
+  register: confluence_binary_installer
+
+- name: Fail if Confluence binary installer is missing
+  ansible.builtin.assert:
+    that:
+      - confluence_binary_installer.stat.exists
+    fail_msg: >-
+      Confluence binary installer not found:
+      {{ confluence_installer_path }}
+
+# ------------------------------------------------------------
+# Check Existing Installation
+# ------------------------------------------------------------
+
+- name: Check if Confluence is already installed
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}/bin/start-confluence.sh"
+  register: confluence_existing_installation
+
+- name: Display existing Confluence installation state
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        'Confluence is already installed - binary installer will be skipped'
+        if confluence_existing_installation.stat.exists
+        else 'Confluence is not installed - binary installer will run'
+      }}
+
+# ------------------------------------------------------------
+# Prepare Installer
+# ------------------------------------------------------------
+
+- name: Copy Confluence binary installer to target
+  ansible.builtin.copy:
+    src: "{{ confluence_installer }}"
+    dest: "{{ confluence_temp_dir }}/{{ confluence_installer }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when: not confluence_existing_installation.stat.exists
+
+# ------------------------------------------------------------
+# Generate Install4j Response File
+# ------------------------------------------------------------
+
+- name: Generate Confluence installer response file
+  ansible.builtin.template:
+    src: response.varfile.j2
+    dest: "{{ confluence_temp_dir }}/confluence-response.varfile"
+    owner: root
+    group: root
+    mode: "0600"
+  when: not confluence_existing_installation.stat.exists
+
+# ------------------------------------------------------------
+# Remove Incomplete Installation
+# ------------------------------------------------------------
+
+- name: Check Confluence installation directory
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}"
+  register: confluence_install_dir_stat
+
+- name: Remove incomplete Confluence installation
+  ansible.builtin.file:
+    path: "{{ confluence_install_dir }}"
+    state: absent
+  when:
+    - confluence_install_dir_stat.stat.exists
+    - not confluence_existing_installation.stat.exists
+
+# ------------------------------------------------------------
+# Run Binary Installer
+# ------------------------------------------------------------
+
+- name: Install Confluence using Linux binary installer
+  ansible.builtin.command:
+    argv:
+      - "{{ confluence_temp_dir }}/{{ confluence_installer }}"
+      - "-q"
+      - "-varfile"
+      - "{{ confluence_temp_dir }}/confluence-response.varfile"
+      - "-dir"
+      - "{{ confluence_install_dir }}"
+  args:
+    creates: "{{ confluence_install_dir }}/bin/start-confluence.sh"
+  when: not confluence_existing_installation.stat.exists
+
+# ------------------------------------------------------------
+# Normalize Installer Runtime User
+# ------------------------------------------------------------
+#
+# Install4j may create another account such as confluence1 when the
+# configured Ansible account "confluence" already exists.
+#
+# The generated bin/user.sh then contains:
+#
+#   CONF_USER="confluence1"
+#
+# Ansible owns the runtime identity, so normalize this to:
+#
+#   CONF_USER="confluence"
+#
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# Normalize Installer Runtime User
+# ------------------------------------------------------------
+
+- name: Check Confluence installer user configuration
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}/bin/user.sh"
+  register: confluence_installer_user_file
+
+- name: Normalize Confluence runtime user
+  ansible.builtin.replace:
+    path: "{{ confluence_install_dir }}/bin/user.sh"
+    regexp: '^CONF_USER="[^"]+"'
+    replace: 'CONF_USER="{{ confluence_user }}"'
+  when: confluence_installer_user_file.stat.exists
+
+# ------------------------------------------------------------
+# Normalize Installation Ownership
+# ------------------------------------------------------------
+
+- name: Ensure Confluence installation ownership
+  ansible.builtin.file:
+    path: "{{ confluence_install_dir }}"
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    recurse: true
+
+# ------------------------------------------------------------
+# Normalize Confluence Home Ownership
+# ------------------------------------------------------------
+
+- name: Ensure Confluence home ownership
+  ansible.builtin.file:
+    path: "{{ confluence_home }}"
+    state: directory
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    recurse: true
+
+# ------------------------------------------------------------
+# Verify Ownership
+# ------------------------------------------------------------
+
+- name: Check Confluence installation ownership
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}"
+  register: confluence_install_ownership
+
+- name: Check Confluence home ownership
+  ansible.builtin.stat:
+    path: "{{ confluence_home }}"
+  register: confluence_home_ownership
+
+- name: Validate Confluence ownership
+  ansible.builtin.assert:
+    that:
+      - confluence_install_ownership.stat.pw_name == confluence_user
+      - confluence_install_ownership.stat.gr_name == confluence_group
+      - confluence_home_ownership.stat.pw_name == confluence_user
+      - confluence_home_ownership.stat.gr_name == confluence_group
+    fail_msg: |
+      Confluence ownership validation failed.
+
+      Installation:
+      Expected : {{ confluence_user }}:{{ confluence_group }}
+      Actual   : {{ confluence_install_ownership.stat.pw_name }}:{{ confluence_install_ownership.stat.gr_name }}
+
+      Home:
+      Expected : {{ confluence_user }}:{{ confluence_group }}
+      Actual   : {{ confluence_home_ownership.stat.pw_name }}:{{ confluence_home_ownership.stat.gr_name }}
+
+    success_msg: |
+      Confluence ownership verified successfully.
+
+      Installation : {{ confluence_user }}:{{ confluence_group }}
+      Home         : {{ confluence_user }}:{{ confluence_group }}
+
+# ------------------------------------------------------------
+# Validate Binary Installation
+# ------------------------------------------------------------
+
+- name: Verify Confluence startup script
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}/bin/start-confluence.sh"
+  register: confluence_start_script
+
+- name: Verify Confluence shutdown script
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}/bin/stop-confluence.sh"
+  register: confluence_stop_script
+
+- name: Verify Confluence installer user file
+  ansible.builtin.stat:
+    path: "{{ confluence_install_dir }}/bin/user.sh"
+  register: confluence_user_script
+
+- name: Validate Confluence binary installation
+  ansible.builtin.assert:
+    that:
+      - confluence_start_script.stat.exists
+      - confluence_stop_script.stat.exists
+      - confluence_user_script.stat.exists
+    fail_msg: |
+      Confluence binary installation validation failed.
+
+      Install directory :
+      {{ confluence_install_dir }}
+
+      start-confluence.sh :
+      {{ confluence_start_script.stat.exists | default(false) }}
+
+      stop-confluence.sh :
+      {{ confluence_stop_script.stat.exists | default(false) }}
+
+      user.sh :
+      {{ confluence_user_script.stat.exists | default(false) }}
+
+# ------------------------------------------------------------
+# Verify Runtime User
+# ------------------------------------------------------------
+
+- name: Read Confluence runtime user
+  ansible.builtin.command:
+    cmd: >
+      grep '^CONF_USER='
+      {{ confluence_install_dir }}/bin/user.sh
+  register: confluence_runtime_user
+  changed_when: false
+
+- name: Verify Confluence runtime user
+  ansible.builtin.assert:
+    that:
+      - ('CONF_USER="' ~ confluence_user ~ '"') in confluence_runtime_user.stdout
+    fail_msg: |
+      Confluence runtime user is incorrect.
+
+      Expected:
+      CONF_USER="{{ confluence_user }}"
+
+      Actual:
+      {{ confluence_runtime_user.stdout }}
+
+    success_msg: |
+      Confluence runtime user successfully normalized to
+      {{ confluence_user }}.
+
+# ------------------------------------------------------------
+# Cleanup
+# ------------------------------------------------------------
+
+- name: Remove temporary Confluence binary installer
+  ansible.builtin.file:
+    path: "{{ confluence_temp_dir }}/{{ confluence_installer }}"
+    state: absent
+
+- name: Remove temporary Confluence response file
+  ansible.builtin.file:
+    path: "{{ confluence_temp_dir }}/confluence-response.varfile"
+    state: absent
+
+# ------------------------------------------------------------
+# Installation Summary
+# ------------------------------------------------------------
+
+- name: Display Confluence binary installation summary
+  ansible.builtin.debug:
+    msg:
+      - "========================================"
+      - "Confluence binary installation completed"
+      - "Version       : {{ confluence_version }}"
+      - "Method        : installer"
+      - "Install Dir   : {{ confluence_install_dir }}"
+      - "Home Dir      : {{ confluence_home }}"
+      - "HTTP Port     : {{ confluence_http_port }}"
+      - "Control Port  : {{ confluence_control_port }}"
+      - "Runtime User  : {{ confluence_user }}"
+      - "========================================"

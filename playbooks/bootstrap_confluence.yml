@@ -6,16 +6,6 @@
 
   tasks:
     - name: Configure Confluence cluster
-      import_role:
-        name: confluence
-        tasks_from: cluster.yml---
-- name: Bootstrap Confluence Data Center
-  hosts: confluence
-  become: true
-  gather_facts: true
-
-  tasks:
-    - name: Configure Confluence cluster
-      import_role:
+      ansible.builtin.import_role:
         name: confluence
         tasks_from: cluster.yml

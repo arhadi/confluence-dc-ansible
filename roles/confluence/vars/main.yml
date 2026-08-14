@@ -1,6 +1,5 @@
 ---
 confluence_required_packages:
-
   - java-21-openjdk
   - java-21-openjdk-devel
   - tar
@@ -9,6 +8,6 @@ confluence_required_packages:
   - wget
   - fontconfig
 
-confluence_archive_path:
+confluence_archive_path: "{{ role_path }}/files/{{ confluence_archive }}"
 
-  "{{ role_path }}/files/{{ confluence_archive }}"
+confluence_installer_path: "{{ role_path }}/files/{{ confluence_installer }}"

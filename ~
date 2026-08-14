@@ -14,7 +14,7 @@ confluence_version: "10.2.15"
 #   installer = Atlassian Linux .bin
 #######################################
 
-confluence_install_method: "installer"
+confluence_install_method: "archive"
 
 #######################################
 # Archive Installer
@@ -98,11 +98,11 @@ confluence_service_name: confluence
 
 confluence_cluster_enabled: true
 
-confluence_cluster_name: "confluence-cluster"
+confluence_cluster_name: confluence-cluster
 
-confluence_cluster_node_id: "confluence-node01"
+confluence_node_name: confluence-node01
 
-confluence_shared_home: "/app/confluence-shared-home"
+confluence_shared_home: /app/confluence-shared-home
 
 #######################################
 # JVM

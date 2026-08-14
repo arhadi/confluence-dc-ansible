@@ -2,31 +2,130 @@
 # ------------------------------------------------------------
 # Configure Confluence Data Center Cluster
 #
-# This task is intentionally skipped during the initial installation.
-# It should be executed only after Confluence has completed the setup
-# wizard and generated confluence.cfg.xml.
+# Run only AFTER the Confluence Setup Wizard has completed.
 # ------------------------------------------------------------
 
-- name: Check if Confluence has been initialized
-  stat:
+- name: Check Confluence configuration file
+  ansible.builtin.stat:
     path: "{{ confluence_home }}/confluence.cfg.xml"
   register: confluence_cfg
 
-- name: Skip cluster configuration if Confluence is not initialized
-  debug:
-    msg: >
-      Confluence has not completed its initial setup.
-      Cluster configuration will be skipped.
+- name: Read Confluence configuration
+  ansible.builtin.slurp:
+    src: "{{ confluence_home }}/confluence.cfg.xml"
+  register: confluence_cfg_content
+  when: confluence_cfg.stat.exists
+
+- name: Determine Confluence initialization state
+  ansible.builtin.set_fact:
+    confluence_initialized: >-
+      {{
+        confluence_cfg.stat.exists
+        and
+        (
+          '<setupStep>setupstart</setupStep>'
+          not in
+          (confluence_cfg_content.content | b64decode)
+        )
+        and
+        (
+          '<buildNumber>0</buildNumber>'
+          not in
+          (confluence_cfg_content.content | b64decode)
+        )
+      }}
+  when: confluence_cfg.stat.exists
+
+- name: Set initialization state when configuration does not exist
+  ansible.builtin.set_fact:
+    confluence_initialized: false
   when: not confluence_cfg.stat.exists
 
+- name: Display Confluence initialization state
+  ansible.builtin.debug:
+    msg:
+      - "Confluence configuration exists : {{ confluence_cfg.stat.exists }}"
+      - "Confluence initialized          : {{ confluence_initialized }}"
+      - "Cluster enabled                 : {{ confluence_cluster_enabled }}"
+
+- name: Stop bootstrap if Confluence setup is incomplete
+  ansible.builtin.fail:
+    msg: |
+      Confluence initial setup has not been completed.
+
+      Complete the Confluence Setup Wizard first:
+
+      http://{{ ansible_default_ipv4.address }}:{{ confluence_http_port }}
+
+      Current configuration:
+      {{ confluence_home }}/confluence.cfg.xml
+
+      cluster.properties has NOT been deployed.
+  when: not confluence_initialized | bool
+
+# ------------------------------------------------------------
+# Shared Home
+# ------------------------------------------------------------
+
+- name: Ensure Confluence shared home exists
+  ansible.builtin.file:
+    path: "{{ confluence_shared_home }}"
+    state: directory
+    owner: "{{ confluence_user }}"
+    group: "{{ confluence_group }}"
+    mode: "0750"
+  when:
+    - confluence_cluster_enabled | bool
+    - confluence_initialized | bool
+
+# ------------------------------------------------------------
+# Cluster Configuration
+# ------------------------------------------------------------
+
 - name: Deploy cluster.properties
-  template:
+  ansible.builtin.template:
     src: cluster.properties.j2
     dest: "{{ confluence_home }}/cluster.properties"
     owner: "{{ confluence_user }}"
     group: "{{ confluence_group }}"
-    mode: "0644"
+    mode: "0640"
   when:
-    - confluence_cluster_enabled
-    - confluence_cfg.stat.exists
+    - confluence_cluster_enabled | bool
+    - confluence_initialized | bool
   notify: Restart Confluence
+
+# ------------------------------------------------------------
+# Validation
+# ------------------------------------------------------------
+
+- name: Verify cluster.properties
+  ansible.builtin.stat:
+    path: "{{ confluence_home }}/cluster.properties"
+  register: confluence_cluster_properties
+  when:
+    - confluence_cluster_enabled | bool
+    - confluence_initialized | bool
+
+- name: Verify cluster configuration deployed
+  ansible.builtin.assert:
+    that:
+      - confluence_cluster_properties.stat.exists
+    fail_msg: "Confluence cluster.properties was not created."
+    success_msg: "Confluence cluster configuration deployed successfully."
+  when:
+    - confluence_cluster_enabled | bool
+    - confluence_initialized | bool
+
+- name: Display Confluence cluster summary
+  ansible.builtin.debug:
+    msg:
+      - "========================================"
+      - "Confluence Data Center Cluster"
+      - "Cluster Name : {{ confluence_cluster_name }}"
+      - "Node ID      : {{ confluence_cluster_node_id }}"
+      - "Shared Home  : {{ confluence_shared_home }}"
+      - "Config       : {{ confluence_home }}/cluster.properties"
+      - "========================================"
+  when:
+    - confluence_cluster_enabled | bool
+    - confluence_initialized | bool

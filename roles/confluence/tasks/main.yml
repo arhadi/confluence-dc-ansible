@@ -1,22 +1,29 @@
 ---
 # ------------------------------------------------------------
-# Confluence Role
+# Confluence Data Center
 # ------------------------------------------------------------
 
-- name: Precheck Confluence installation
-  import_tasks: precheck.yml
+- import_tasks: precheck.yml
+  tags:
+    - always
+    - precheck
 
-- name: Install prerequisites
-  import_tasks: prerequisites.yml
+- import_tasks: prerequisites.yml
+  tags:
+    - prerequisites
 
-- name: Install Confluence
-  import_tasks: install.yml
+- import_tasks: install.yml
+  tags:
+    - install
 
-- name: Configure Confluence
-  import_tasks: configure.yml
+- import_tasks: configure.yml
+  tags:
+    - configure
 
-- name: Configure systemd
-  import_tasks: systemd.yml
+- import_tasks: systemd.yml
+  tags:
+    - systemd
 
-- name: Validate Confluence installation
-  import_tasks: validate.yml
+- import_tasks: validate.yml
+  tags:
+    - validate
