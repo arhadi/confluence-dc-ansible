@@ -1,7 +1,7 @@
 ---
-###############################################################################
+# ------------------------------------------------------------
 # Validate Confluence Installation
-###############################################################################
+# ------------------------------------------------------------
 
 - name: Wait for Confluence service
   wait_for:
@@ -10,9 +10,9 @@
     delay: 10
     timeout: 300
 
-###############################################################################
+# ------------------------------------------------------------
 # Check HTTP Response
-###############################################################################
+# ------------------------------------------------------------
 
 - name: Check Confluence HTTP endpoint
   uri:
@@ -27,9 +27,9 @@
   register: confluence_http
   failed_when: false
 
-###############################################################################
+# ------------------------------------------------------------
 # Check Setup Wizard
-###############################################################################
+# ------------------------------------------------------------
 
 - name: Check Confluence setup page
   uri:
@@ -44,9 +44,9 @@
   register: confluence_setup
   failed_when: false
 
-###############################################################################
+# ------------------------------------------------------------
 # Show Service Status
-###############################################################################
+# ------------------------------------------------------------
 
 - name: Show Confluence HTTP status
   debug:
@@ -54,46 +54,21 @@
       - "HTTP Status  : {{ confluence_http.status | default('Unknown') }}"
       - "Setup Status : {{ confluence_setup.status | default('Unknown') }}"
 
-###############################################################################
+# ------------------------------------------------------------
 # Installation Summary
-###############################################################################
+# ------------------------------------------------------------
 
 - name: Confluence installation summary
-  debug:
+  ansible.builtin.debug:
     msg:
-      - "======================================================="
-      - "Confluence Infrastructure Installation Completed"
-      - ""
-      - "Service           : confluence"
-      - "Install Directory : {{ confluence_install_dir }}"
-      - "Home Directory    : {{ confluence_home }}"
-      - "HTTP Port         : {{ confluence_http_port }}"
-      - "Database          : {{ postgres_database }}"
-      - ""
-      - "Next Step:"
-      - "Open the following URL in your browser:"
-      - ""
-      - "http://{{ ansible_default_ipv4.address | default(inventory_hostname) }}:{{ confluence_http_port }}"
-      - ""
-      - "Complete the Confluence Setup Wizard."
-      - ""
-      - "After the wizard finishes successfully,"
-      - "run bootstrap_confluence.yml."
-      - "======================================================="
-
-- name: Display Next Step
-  debug:
-    msg:
-      - ""
-      - "=============================================="
-      - "Infrastructure installation completed."
-      - ""
-      - "NEXT:"
-      - "1. Open browser"
-      - "2. Complete Confluence Setup Wizard"
-      - "3. Verify database schema is created"
-      - "4. Run:"
-      - ""
-      - "ansible-playbook playbooks/bootstrap_confluence.yml"
-      - ""
-      - "=============================================="
+      - "========================================"
+      - "Confluence installation completed"
+      - "Version     : {{ confluence_version }}"
+      - "Install Dir : {{ confluence_install_dir }}"
+      - "Home Dir    : {{ confluence_home }}"
+      - "HTTP Port   : {{ confluence_http_port }}"
+      - "Database    : {{ postgres_database }}"
+      - "Service     : {{ confluence_service_name }}"
+      - "========================================"
+      - "Next: Complete setup at http://{{ ansible_default_ipv4.address }}:{{ confluence_http_port }}"
+      - "Then run: ansible-playbook playbooks/bootstrap_confluence.yml"

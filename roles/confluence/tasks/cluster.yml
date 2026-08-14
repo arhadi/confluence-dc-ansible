@@ -1,11 +1,11 @@
 ---
-###############################################################################
+# ------------------------------------------------------------
 # Configure Confluence Data Center Cluster
 #
 # This task is intentionally skipped during the initial installation.
 # It should be executed only after Confluence has completed the setup
 # wizard and generated confluence.cfg.xml.
-###############################################################################
+# ------------------------------------------------------------
 
 - name: Check if Confluence has been initialized
   stat:
